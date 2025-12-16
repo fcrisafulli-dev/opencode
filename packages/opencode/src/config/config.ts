@@ -660,6 +660,10 @@ export namespace Config {
         .string()
         .optional()
         .describe("Custom username to display in conversations instead of system username"),
+      defaultAgent: z
+        .string()
+        .optional()
+        .describe("Default agent to use for new sessions (e.g., 'build', 'plan'). Defaults to 'build' if not specified"),
       mode: z
         .object({
           build: Agent.optional(),

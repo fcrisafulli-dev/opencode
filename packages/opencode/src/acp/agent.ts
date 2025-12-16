@@ -35,10 +35,14 @@ export namespace ACP {
 
   export async function init({ sdk }: { sdk: OpencodeClient }) {
     const model = await defaultModel({ sdk })
+    const agent = await defaultAgent({ sdk })
     return {
       create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
         if (!fullConfig.defaultModel) {
           fullConfig.defaultModel = model
+        }
+        if (!fullConfig.defaultAgent) {
+          fullConfig.defaultAgent = agent
         }
         return new Agent(connection, fullConfig)
       },
@@ -705,7 +709,8 @@ export namespace ACP {
           description: agent.description,
         }))
 
-      const currentModeId = availableModes.find((m) => m.name === "build")?.id ?? availableModes[0].id
+      const defaultAgentName = await defaultAgent(this.config, directory)
+      const currentModeId = availableModes.find((m) => m.name === defaultAgentName)?.id ?? availableModes[0].id
 
       const mcpServers: Record<string, Config.Mcp> = {}
       for (const server of params.mcpServers) {
@@ -807,7 +812,7 @@ export namespace ACP {
       if (!current) {
         this.sessionManager.setModel(session.id, model)
       }
-      const agent = session.modeId ?? "build"
+      const agent = session.modeId ?? (await defaultAgent(this.config, directory))
 
       const parts: Array<
         { type: "text"; text: string } | { type: "file"; url: string; filename: string; mime: string }
@@ -1006,6 +1011,26 @@ export namespace ACP {
       })
 
     return model ?? { providerID: "opencode", modelID: "big-pickle" }
+  }
+
+  async function defaultAgent(config: ACPConfig, cwd?: string) {
+    const sdk = config.sdk
+    const configured = config.defaultAgent
+    if (configured) return configured
+
+    const agent = await sdk.config
+      .get({ directory: cwd }, { throwOnError: true })
+      .then((resp) => {
+        const cfg = resp.data
+        if (!cfg || !cfg.defaultAgent) return undefined
+        return cfg.defaultAgent
+      })
+      .catch((error) => {
+        log.error("failed to load user config for default agent", { error })
+        return undefined
+      })
+
+    return agent ?? "build"
   }
 
   function parseUri(
