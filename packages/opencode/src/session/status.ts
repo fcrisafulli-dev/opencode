@@ -68,8 +68,6 @@ export namespace SessionStatus {
       Bus.publish(Event.Idle, {
         sessionID,
       })
-      delete state()[sessionID]
-      return
     }
     state()[sessionID] = status
   }
