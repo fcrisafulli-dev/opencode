@@ -660,7 +660,10 @@ export namespace Server {
           },
         }),
         async (c) => {
-          const result = SessionStatus.list()
+          const result: Record<string, SessionStatus.Info> = {}
+          for await (const session of Session.list()) {
+            result[session.id] = SessionStatus.get(session.id)
+          }
           return c.json(result)
         },
       )
